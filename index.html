@@ -869,6 +869,61 @@ async function generateAll() {
         idx += "\n";
       }
       folder.file("GPS_INDEX.txt", idx);
+
+      /* ── KML georreferenciado para Google Earth / Google Maps ── */
+      var fotosGPS = photos.filter(function(p){ return p.dataUrl && p.gps; });
+      if (fotosGPS.length > 0) {
+        var kml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n';
+        kml += '  <Document>\n';
+        kml += '    <name>Informe Tecnico - ' + expte + '</name>\n';
+        kml += '    <description>Reportaje fotografico georreferenciado</description>\n';
+        kml += '    <Style id="fotaPin">\n';
+        kml += '      <IconStyle><color>ff1a7f64</color><scale>1.1</scale>';
+        kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon>';
+        kml += '</IconStyle><LabelStyle><scale>0.8</scale></LabelStyle>\n';
+        kml += '    </Style>\n';
+        kml += '    <Style id="inmueblePin">\n';
+        kml += '      <IconStyle><color>ff0078d4</color><scale>1.4</scale>';
+        kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-square.png</href></Icon>';
+        kml += '</IconStyle>\n';
+        kml += '    </Style>\n';
+        if (gpsData) {
+          kml += '    <Placemark>\n';
+          kml += '      <name>Inmueble - ' + expte + '</name>\n';
+          kml += '      <description><![CDATA[';
+          kml += '<b>Expediente:</b> ' + expte + '<br/>';
+          kml += '<b>Titular:</b> ' + gv("titular") + '<br/>';
+          kml += '<b>Municipio:</b> ' + gv("municipio") + '<br/>';
+          kml += '<b>Direccion:</b> ' + gv("emplazamiento");
+          kml += ']]></description>\n';
+          kml += '      <styleUrl>#inmueblePin</styleUrl>\n';
+          kml += '      <Point><coordinates>' + gpsData.lon + ',' + gpsData.lat + ',0</coordinates></Point>\n';
+          kml += '    </Placemark>\n';
+        }
+        for (var ki = 0; ki < photos.length; ki++) {
+          var kp = photos[ki];
+          if (!kp.dataUrl || !kp.gps) continue;
+          var kext = (kp.type || "image/jpeg").split("/")[1].replace("jpeg","jpg");
+          var kfname = "foto_" + String(ki+1).padStart(2,"0") + "_GPS" + kp.gps.lat + "_" + kp.gps.lon + "." + kext;
+          kml += '    <Placemark>\n';
+          kml += '      <name>Foto ' + (ki+1) + '</name>\n';
+          kml += '      <description><![CDATA[';
+          kml += '<b>Foto:</b> ' + (ki+1) + ' de ' + photos.length + '<br/>';
+          if (kp.desc) kml += '<b>Descripcion:</b> ' + kp.desc + '<br/>';
+          kml += '<b>Latitud:</b> ' + kp.gps.lat + '<br/>';
+          kml += '<b>Longitud:</b> ' + kp.gps.lon + '<br/>';
+          kml += '<b>Precision GPS:</b> +/-' + kp.gps.acc + ' m<br/>';
+          kml += '<b>Archivo:</b> ' + kfname;
+          kml += ']]></description>\n';
+          kml += '      <styleUrl>#fotaPin</styleUrl>\n';
+          kml += '      <Point><coordinates>' + kp.gps.lon + ',' + kp.gps.lat + ',0</coordinates></Point>\n';
+          kml += '    </Placemark>\n';
+        }
+        kml += '  </Document>\n';
+        kml += '</kml>';
+        folder.file(lastFn + "_MAPA.kml", kml);
+      }
     }
 
     lastZip = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
